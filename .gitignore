@@ -1,0 +1,6 @@
+# npm
+api-minisuper/node_modules
+api-proveedores/node_modules
+#.env
+api-minisuper/.env
+api-proveedores/.env
