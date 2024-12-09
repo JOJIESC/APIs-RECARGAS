@@ -19,26 +19,23 @@ export async function postRecarga(req, res) {
     console.log("Procesando solicitud POST...");
 
     const { phoneNumber, amount, providerId } = req.body;
-    console.log("Datos de la recarga:", phoneNumber, amount, providerId);
 
     if (!phoneNumber || !amount || !providerId) {
-      return res
-        .status(400)
-        .json({ error: "Todos los campos son obligatorios" });
+      return res.status(400).json({ error: "Todos los campos son obligatorios" });
     }
 
-    // Inserción en la base de datos de miniSuper
+    // Inserción en la base de datos de MiniSuper
     const miniSuperResult = await miniSuperDb.query(
       `
       INSERT INTO transacciones (numero_telefono, monto, compania, fecha_hora, respuesta, id_proveedor)
-      VALUES (?, ?, 'Pendiente', NOW(), ?, ?)
+      VALUES (?, ?, ?, NOW(), 'Pendiente', ?)
     `,
-      [phoneNumber, amount, "Pendiente", providerId]
-    ) ;
+      [phoneNumber, amount, providerId === "1" ? "Bait" : providerId === "2" ? "Telcel" : "Movistar", providerId]
+    );
 
-    console.log("Transacción registrada en miniSuper:", miniSuperResult);
+    console.log("Transacción registrada en MiniSuper:", miniSuperResult);
 
-    // Realiza la llamada a la API de proveedores
+    // Llamada a la API del proveedor
     const response = await axios.post("http://localhost:3002/recargas", {
       phoneNumber,
       amount,
@@ -46,25 +43,18 @@ export async function postRecarga(req, res) {
       miniSuperTransactionId: miniSuperResult.insertId,
     });
 
-    console.log("Respuesta de proveedores:", response.data);
+    console.log("Respuesta del proveedor:", response.data);
 
     await miniSuperDb.end();
 
-    return res.json({
-      message: "Recarga exitosa en miniSuper y proveedor",
+    res.json({
+      message: "Recarga exitosa en MiniSuper y proveedor",
       miniSuperResult,
       providerResponse: response.data,
     });
   } catch (error) {
     console.error("Error al procesar la solicitud:", error);
-
     await miniSuperDb.end();
-
-    return res
-      .status(500)
-      .json({
-        error: "Error interno al procesar la recarga",
-        details: error.message,
-      });
+    res.status(500).json({ error: "Error interno al procesar la recarga" });
   }
 }
